@@ -1,7 +1,7 @@
 {
   "name": "vsmarket",
-  "displayName": "vscode-market",
-  "description": "VSCode插件市场",
+  "displayName": "VSCode插件市场",
+  "description": "从VSCode插件市场安装插件",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.80.0"
@@ -9,6 +9,7 @@
   "categories": [
     "Other"
   ],
+  "publisher": "vscode-market",
   "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "contributes": {

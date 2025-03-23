@@ -150,6 +150,9 @@
               uninstallButton.onclick = () => installExtension(message.extensionId, uninstallButton)
             }
             break
+          case 'refresh':
+            searchExtensions()
+            break
         }
       })
 
