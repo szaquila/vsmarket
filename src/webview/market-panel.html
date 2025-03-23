@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VSCode插件市场</title>
+    <style>
+      body {
+        font-family: var(--vscode-font-family);
+        padding: 20px;
+      }
+      .search-box {
+        margin-bottom: 20px;
+      }
+      .extension-list {
+        display: grid;
+        gap: 16px;
+      }
+      .extension-item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 4px;
+      }
+      .extension-icon {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        background-color: transparent;
+      }
+      .extension-info h3 {
+        margin: 0 0 8px 0;
+      }
+      .extension-stats {
+        font-size: 0.9em;
+        color: var(--vscode-descriptionForeground);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="搜索插件..." />
+      <button onclick="searchExtensions()">搜索</button>
+    </div>
+    <div class="extension-list" id="extensionList"></div>
+    <script>
+      const vscode = acquireVsCodeApi()
+      let extensions = []
+
+      // 默认图标的base64编码
+      const defaultIconBase64 =
+        'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgcng9IjIiIHJ5PSIyIj48L3JlY3Q+PHBhdGggZD0iTTcgMTJoMTBNMTIgN3YxMCI+PC9wYXRoPjwvc3ZnPg=='
+
+      function searchExtensions() {
+        const query = document.getElementById('searchInput').value
+        vscode.postMessage({
+          command: 'search',
+          text: query
+        })
+      }
+
+      function installExtension(extensionId) {
+        vscode.postMessage({
+          command: 'install',
+          extensionId: extensionId
+        })
+      }
+
+      function uninstallExtension(extensionId) {
+        vscode.postMessage({
+          command: 'uninstall',
+          extensionId: extensionId
+        })
+      }
+
+      function getInstalledExtensions() {
+        vscode.postMessage({
+          command: 'list'
+        })
+      }
+
+      window.addEventListener('message', event => {
+        const message = event.data
+        switch (message.command) {
+          case 'updateExtensions':
+            extensions = message.extensions
+            renderExtensions()
+            break
+        }
+      })
+
+      function renderExtensions() {
+        const container = document.getElementById('extensionList')
+        container.innerHTML = extensions
+          .map(ext => {
+            // 输出扩展信息到控制台
+            const iconUrl = ext.iconUrl || defaultIconBase64
+            const extensionId = ext.extensionName
+            return `<div class="extension-item">
+                    <img class="extension-icon" src="${iconUrl}" loading="lazy" />
+                    <div class="extension-info">
+                        <h3>${ext.displayName}</h3>
+                        <div>${ext.shortDescription}</div>
+                        <div class="extension-stats">发布者: ${ext.publisher}</div>
+                    </div>
+                    <button onclick="${ext.installed ? "uninstallExtension('" + ext.extensionName + "')" : "installExtension('" + extensionId + "')"}">${ext.installed ? '卸载' : '安装'}</button>
+                </div>`
+          })
+          .join('')
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VSCode插件市场</title>
+    <style>
+      body {
+        padding: 16px;
+        font-family: var(--vscode-font-family);
+        color: var(--vscode-foreground);
+        background-color: var(--vscode-sideBar-background);
+      }
+      .search-box {
+        margin-bottom: 12px;
+        display: flex;
+        gap: 8px;
+      }
+      .search-box input {
+        flex: 1;
+        min-width: 0;
+        padding: 4px 8px;
+        border: 1px solid var(--vscode-input-border);
+        background-color: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border-radius: 4px;
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .search-box input:focus {
+        border-color: var(--vscode-focusBorder);
+      }
+      .search-box button {
+        padding: 4px 8px;
+        background-color: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        cursor: pointer;
+      }
+      .extension-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .extension-item {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        padding: 8px;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 4px;
+      }
+      .extension-icon {
+        width: 42px;
+        height: 42px;
+      }
+      .extension-info h3 {
+        margin: 0 0 4px 0;
+        font-size: 14px;
+      }
+      .extension-description {
+        font-size: 12px;
+        margin-bottom: 4px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .extension-stats {
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .install-button {
+        margin-top: 8px;
+        padding: 2px 8px;
+        background-color: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="搜索插件...按回车搜索" />
+    </div>
+    <div class="extension-list" id="extensionList"></div>
+    <script>
+      const vscode = acquireVsCodeApi()
+      let extensions = []
+
+      // 默认图标的base64编码
+      const defaultIconBase64 =
+        'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgcng9IjIiIHJ5PSIyIj48L3JlY3Q+PHBhdGggZD0iTTcgMTJoMTBNMTIgN3YxMCI+PC9wYXRoPjwvc3ZnPg=='
+
+      function searchExtensions() {
+        const query = document.getElementById('searchInput').value
+        vscode.postMessage({
+          command: 'search',
+          text: query
+        })
+      }
+
+      const searchInput = document.getElementById('searchInput')
+      searchInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          searchExtensions()
+        }
+      })
+      searchInput.focus()
+
+      function installExtension(extensionId, button) {
+        button.textContent = '安装中...'
+        button.disabled = true
+        vscode.postMessage({
+          command: 'install',
+          extensionId: extensionId
+        })
+      }
+
+      function uninstallExtension(extensionId, button) {
+        button.textContent = '卸载中...'
+        button.disabled = true
+        vscode.postMessage({
+          command: 'uninstall',
+          extensionId: extensionId
+        })
+      }
+
+      window.addEventListener('message', event => {
+        const message = event.data
+        switch (message.command) {
+          case 'updateExtensions':
+            extensions = message.extensions
+            renderExtensions()
+            break
+          case 'installSuccess':
+            const installButton = document.querySelector(`[data-extension-id="${message.extensionId}"]`)
+            if (installButton) {
+              installButton.textContent = '卸载'
+              installButton.disabled = false
+              installButton.onclick = () => uninstallExtension(message.extensionId, installButton)
+            }
+            break
+          case 'uninstallSuccess':
+            const uninstallButton = document.querySelector(`[data-extension-id="${message.extensionId}"]`)
+            if (uninstallButton) {
+              uninstallButton.textContent = '安装'
+              uninstallButton.disabled = false
+              uninstallButton.onclick = () => installExtension(message.extensionId, uninstallButton)
+            }
+            break
+        }
+      })
+
+      function renderExtensions() {
+        const container = document.getElementById('extensionList')
+        container.innerHTML = extensions
+          .map(ext => {
+            const iconUrl = ext.iconUrl || defaultIconBase64
+            const extensionId = ext.extensionName
+            return `<div class="extension-item">
+                  <img class="extension-icon" src="${iconUrl}" onerror="this.src='default-icon.png'" />
+                  <div class="extension-info">
+                      <h3>${ext.displayName}</h3>
+                      <div class="extension-description">${ext.shortDescription}</div>
+                      <div class="extension-stats">发布者: ${ext.publisher}</div>
+                    <button class="install-button" data-extension-id="${extensionId}" onclick="${ext.installed ? `uninstallExtension('${extensionId}', this)` : `installExtension('${extensionId}', this)`}">${ext.installed ? '卸载' : '安装'}</button>
+                  </div>
+              </div>`
+          })
+          .join('')
+      }
+
+      // 初始加载时执行一次搜索
+      searchExtensions()
+    </script>
+  </body>
+</html>

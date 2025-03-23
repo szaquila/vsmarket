@@ -1,0 +1,73 @@
+{
+  "name": "vsmarket",
+  "displayName": "vscode-market",
+  "description": "VSCode插件市场",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vsmarket.search",
+        "title": "VSCode插件市场搜索"
+      },
+      {
+        "command": "vsmarket.refreshSidebar",
+        "title": "刷新插件列表",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vsmarket-sidebar",
+          "title": "VSCode插件市场",
+          "icon": "$(extensions)"
+        }
+      ]
+    },
+    "views": {
+      "vsmarket-sidebar": [
+        {
+          "id": "vsmarket-extensions",
+          "name": "插件列表",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "vsmarket.refreshSidebar",
+          "when": "view == vsmarket-extensions",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "pnpm run compile && pnpm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.13.11",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1"
+  }
+}
