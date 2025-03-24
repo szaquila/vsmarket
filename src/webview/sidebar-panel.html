@@ -12,14 +12,35 @@
         background-color: var(--vscode-sideBar-background);
       }
       .search-box {
-        margin-bottom: 12px;
+        position: fixed;
+        top: 0;
+        left: 6px;
+        right: 6px;
+        z-index: 100;
+        margin: 0;
+        padding: 16px;
+        background-color: var(--vscode-sideBar-background);
+        border-bottom: 1px solid var(--vscode-widget-border);
         display: flex;
+        flex-direction: column;
         gap: 8px;
+      }
+      .search-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+      .search-icon {
+        position: absolute;
+        left: 8px;
+        width: 16px;
+        height: 16px;
+        color: var(--vscode-input-placeholderForeground);
       }
       .search-box input {
         flex: 1;
-        min-width: 0;
-        padding: 4px 8px;
+        min-width: 10;
+        padding: 4px 8px 4px 32px;
         border: 1px solid var(--vscode-input-border);
         background-color: var(--vscode-input-background);
         color: var(--vscode-input-foreground);
@@ -28,60 +49,120 @@
         outline: none;
         transition: border-color 0.2s;
       }
+      .source-info {
+        font-size: 10px;
+        color: var(--vscode-descriptionForeground);
+      }
       .search-box input:focus {
         border-color: var(--vscode-focusBorder);
       }
-      .search-box button {
+      .extension-list {
+        display: grid;
+        gap: 16px;
+        width: calc(100% - 12px);
+        margin: 60px 0 0;
+      }
+      .extension-item {
+        display: flex;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 4px;
+        position: relative;
+      }
+      .extension-item:hover .install-button {
+        opacity: 1;
+      }
+      .extension-icon {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        background-color: transparent;
+      }
+      @media (max-width: 200px) {
+        .extension-icon {
+          display: none;
+        }
+        .extension-item {
+          gap: 8px;
+        }
+      }
+      .extension-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .extension-name {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .extension-description {
+        color: var(--vscode-descriptionForeground);
+        font-size: 13px;
+        line-height: 1.4;
+        margin: 0;
+        display: -webkit-box;
+        line-clamp: 2;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .extension-info h3 {
+        margin: 0;
+      }
+      .extension-stats {
+        font-size: 0.9em;
+        color: var(--vscode-descriptionForeground);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .extension-stats .installed-icon {
+        color: #4CAF50;
+        font-size: 14px;
+      }
+      .extension-stats .download-icon {
+        width: 14px;
+        height: 14px;
+        display: inline-flex;
+        margin-right: 2px;
+      }
+      .install-button {
+        position: absolute;
+        top: 16px;
+        right: 16px;
         padding: 4px 8px;
         background-color: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
         border: none;
         cursor: pointer;
-      }
-      .extension-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      .extension-item {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 12px;
-        padding: 8px;
-        border: 1px solid var(--vscode-widget-border);
-        border-radius: 4px;
-      }
-      .extension-icon {
-        width: 42px;
-        height: 42px;
-      }
-      .extension-info h3 {
-        margin: 0 0 4px 0;
-        font-size: 14px;
-      }
-      .extension-description {
         font-size: 12px;
-        margin-bottom: 4px;
-        color: var(--vscode-descriptionForeground);
-      }
-      .extension-stats {
-        font-size: 11px;
-        color: var(--vscode-descriptionForeground);
-      }
-      .install-button {
-        margin-top: 8px;
-        padding: 2px 8px;
-        background-color: var(--vscode-button-background);
-        color: var(--vscode-button-foreground);
-        border: none;
-        cursor: pointer;
-        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
       }
     </style>
   </head>
   <body>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="搜索插件...按回车搜索" />
+      <div class="search-container">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="searchInput" placeholder="输入回车进行搜索" />
+      </div>
+      <div class="source-info">使用 marketplace.visualstudio.com 作为插件源</div>
     </div>
     <div class="extension-list" id="extensionList"></div>
     <script>
@@ -162,15 +243,19 @@
           .map(ext => {
             const iconUrl = ext.iconUrl || defaultIconBase64
             const extensionId = ext.extensionName
+            const stats = ext.installed
+              ? `已安装 <span class="installed-icon">✓</span> | ${ext.publisher}`
+              : `<svg class="download-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>${ext.downloadCount || 0} | ${ext.publisher}`
             return `<div class="extension-item">
-                  <img class="extension-icon" src="${iconUrl}" onerror="this.src='default-icon.png'" />
-                  <div class="extension-info">
-                      <h3>${ext.displayName}</h3>
-                      <div class="extension-description">${ext.shortDescription}</div>
-                      <div class="extension-stats">发布者: ${ext.publisher}</div>
-                    <button class="install-button" data-extension-id="${extensionId}" onclick="${ext.installed ? `uninstallExtension('${extensionId}', this)` : `installExtension('${extensionId}', this)`}">${ext.installed ? '卸载' : '安装'}</button>
-                  </div>
-              </div>`
+              <img class="extension-icon" src="${iconUrl}" loading="lazy" />
+              <div class="extension-info">
+                <div class="extension-name"><h3>${ext.displayName}</h3></div>
+                <div class="extension-description">${ext.shortDescription}</div>
+                <div class="extension-stats">${stats}</div>
+              </div>
+              <button class="install-button" data-extension-id="${extensionId}"
+              onclick="${ext.installed ? `uninstallExtension('${extensionId}', this)` : `installExtension('${extensionId}', this)`}">${ext.installed ? '卸载' : '安装'}</button>
+            </div>`
           })
           .join('')
       }
