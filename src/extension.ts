@@ -41,7 +41,6 @@ export function activate(context: vscode.ExtensionContext) {
         Logger.logObject('Failed to install extension: ', errorMessage)
 
         if (extensionFile.startsWith('http')) {
-          const fetch = (await import('node-fetch')).default
           const os = await import('os')
           const path = await import('path')
           const fs = await import('fs/promises')
