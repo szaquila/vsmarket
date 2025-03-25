@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import { VSCodeMarketplaceClient } from './api/client'
-import { MarketPanel } from './webview/MarketPanel'
 import { SidebarProvider } from './webview/SidebarProvider'
 
 import { Logger } from './utils/logger'
@@ -9,11 +8,6 @@ export function activate(context: vscode.ExtensionContext) {
   Logger.initialize()
   Logger.log('VSCode Market extension is now active!')
 
-  const searchCommand = vscode.commands.registerCommand('vsmarket.search', () => {
-    Logger.log('Opening VSCode Market panel...')
-    MarketPanel.createOrShow(context.extensionUri)
-  })
-
   const sidebarProvider = new SidebarProvider(context.extensionUri)
   const sidebarView = vscode.window.registerWebviewViewProvider('vsmarket-extensions', sidebarProvider)
 
@@ -21,76 +15,82 @@ export function activate(context: vscode.ExtensionContext) {
     sidebarProvider.refresh()
   })
 
-  context.subscriptions.push(searchCommand, sidebarView, refreshCommand)
+  const searchCommand = vscode.commands.registerCommand('vsmarket.searchExtensions', async (query: string) => {
+    try {
+      return await VSCodeMarketplaceClient.searchExtensions({
+        query,
+        pageSize: 20
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      vscode.window.showErrorMessage(`Failed to search extensions: ${errorMessage}`)
+      throw error
+    }
+  })
 
-  if (MarketPanel.currentPanel) {
-    const panel = MarketPanel.currentPanel
-    panel.onDidReceiveMessage(
-      async message => {
-        switch (message.command) {
-          case 'search':
-            try {
-              const extensions = await VSCodeMarketplaceClient.searchExtensions({
-                query: message.text,
-                pageSize: 20
-              })
-              panel.updateExtensionList(extensions)
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              vscode.window.showErrorMessage(`Failed to search extensions: ${errorMessage}`)
-            }
-            break
+  const installCommand = vscode.commands.registerCommand('vsmarket.installExtension', async (extensionId: string, extensionFile: string) => {
+    try {
+      Logger.logObject('installCommand', { extensionId, extensionFile })
 
-          case 'install':
-            try {
-              await vscode.commands.executeCommand('workbench.extensions.installExtension', message.extensionId)
-              vscode.window.showInformationMessage(`Successfully installed extension: ${message.extensionId}`)
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              vscode.window.showErrorMessage(`Failed to install extension: ${errorMessage}`)
-            }
-            break
+      await vscode.commands.executeCommand('workbench.extensions.installExtension', extensionId)
+      vscode.window.showInformationMessage(`Successfully installed extension: ${extensionId}`)
+      return true
+    } catch (error) {
+      try {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        Logger.logObject('Failed to install extension: ', errorMessage)
 
-          case 'uninstall':
-            try {
-              await vscode.commands.executeCommand('workbench.extensions.uninstallExtension', message.extensionId)
-              vscode.window.showInformationMessage(`Successfully uninstalled extension: ${message.extensionId}`)
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              vscode.window.showErrorMessage(`Failed to uninstall extension: ${errorMessage}`)
-            }
-            break
+        if (extensionFile.startsWith('http')) {
+          const fetch = (await import('node-fetch')).default
+          const os = await import('os')
+          const path = await import('path')
+          const fs = await import('fs/promises')
 
-          case 'list':
-            try {
-              const extensions = vscode.extensions.all
-              const extensionList = extensions.map(ext => ({
-                id: ext.id,
-                displayName: ext.packageJSON.displayName || ext.packageJSON.name,
-                description: ext.packageJSON.description,
-                version: ext.packageJSON.version
-              }))
-              panel.webview.postMessage({
-                command: 'updateInstalledExtensions',
-                extensions: extensionList
-              })
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : String(error)
-              vscode.window.showErrorMessage(`Failed to list extensions: ${errorMessage}`)
-            }
-            break
+          // Download extension file to temp directory
+          const response = await fetch(extensionFile)
+          if (!response.ok) {
+            throw new Error(`Failed to download extension: ${response.statusText}`)
+          }
+
+          const tempDir = os.tmpdir()
+          const tempFile = path.join(tempDir, `extension-${Date.now()}.vsix`)
+          const buffer = await response.arrayBuffer()
+          await fs.writeFile(tempFile, Buffer.from(buffer))
+
+          // Install from local file
+          const uri = vscode.Uri.file(tempFile)
+          await vscode.commands.executeCommand('workbench.extensions.installExtension', uri)
+          await fs.unlink(tempFile)
+        } else {
+          await vscode.commands.executeCommand('workbench.extensions.installExtension', extensionFile)
         }
-      },
-      undefined,
-      context.subscriptions
-    )
-  }
+        vscode.window.showInformationMessage(`Successfully installed extension: ${extensionId}`)
+        return true
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        vscode.window.showErrorMessage(`Failed to install extension: ${errorMessage}`)
+        throw error
+      }
+    }
+  })
+
+  const uninstallCommand = vscode.commands.registerCommand('vsmarket.uninstallExtension', async (extensionId: string) => {
+    try {
+      await vscode.commands.executeCommand('workbench.extensions.uninstallExtension', extensionId)
+      vscode.window.showInformationMessage(`Successfully uninstalled extension: ${extensionId}`)
+      return true
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      vscode.window.showErrorMessage(`Failed to uninstall extension: ${errorMessage}`)
+      throw error
+    }
+  })
+
+  context.subscriptions.push(sidebarView, refreshCommand, searchCommand, installCommand, uninstallCommand)
 }
 
 export function deactivate() {
-  if (MarketPanel.currentPanel) {
-    MarketPanel.currentPanel.dispose()
-  }
+  // Clean up resources
 }
 
 function getIDEType(): string {

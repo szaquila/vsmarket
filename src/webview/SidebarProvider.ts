@@ -1,8 +1,10 @@
 import * as vscode from 'vscode'
 import { ExtensionData, VSCodeMarketplaceClient } from '../api/client'
+import { Logger } from '../utils/logger'
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView
+  private _disposables: vscode.Disposable[] = []
 
   constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -20,10 +22,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       switch (data.command) {
         case 'search': {
           try {
-            const extensions = await VSCodeMarketplaceClient.searchExtensions({
-              query: data.text,
-              pageSize: 20
-            })
+            const extensions = await vscode.commands.executeCommand('vsmarket.searchExtensions', data.text)
             this._view?.webview.postMessage({ command: 'updateExtensions', extensions })
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
@@ -33,9 +32,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         }
         case 'install': {
           try {
-            await vscode.commands.executeCommand('workbench.extensions.installExtension', data.extensionId)
-            vscode.window.showInformationMessage(`Successfully installed extension: ${data.extensionId}`)
-            this._view?.webview.postMessage({ command: 'installSuccess', extensionId: data.extensionId })
+            const success = await vscode.commands.executeCommand('vsmarket.installExtension', data.extensionId, data.extensionFile)
+            if (success) {
+              this._view?.webview.postMessage({ command: 'installSuccess', extensionId: data.extensionId })
+            }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
             vscode.window.showErrorMessage(`Failed to install extension: ${errorMessage}`)
@@ -45,14 +45,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         case 'uninstall':
           try {
-            await vscode.commands.executeCommand('workbench.extensions.uninstallExtension', data.extensionId)
-            vscode.window.showInformationMessage(`Successfully uninstalled extension: ${data.extensionId}`)
-            this._view?.webview.postMessage({ command: 'uninstallSuccess', extensionId: data.extensionId })
+            const success = await vscode.commands.executeCommand('vsmarket.uninstallExtension', data.extensionId)
+            if (success) {
+              this._view?.webview.postMessage({ command: 'uninstallSuccess', extensionId: data.extensionId })
+            }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
             vscode.window.showErrorMessage(`Failed to uninstall extension: ${errorMessage}`)
           }
           break
+
+        case 'log':
+            Logger.logObject('updateViewportWidth', data.width)
+            break
       }
     })
   }

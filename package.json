@@ -15,10 +15,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "vsmarket.search",
-        "title": "VSCode插件市场搜索"
-      },
-      {
         "command": "vsmarket.refreshSidebar",
         "title": "刷新插件列表",
         "icon": "$(refresh)"
@@ -59,6 +55,9 @@
     "pretest": "pnpm run compile && pnpm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/vscode": "^1.80.0",

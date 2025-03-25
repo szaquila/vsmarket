@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VSCode插件市场</title>
     <style>
+      :root {
+        --viewport-width: 120px;
+      }
       body {
         padding: 16px;
         font-family: var(--vscode-font-family);
@@ -67,11 +70,12 @@
       }
       .extension-info {
         margin: 0 0 4px 0;
-        width: 110px;
         display: inline;
+        width: calc(var(--viewport-width) * 0.9);
       }
       .extension-name {
         font-size: 14px;
+        width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -80,6 +84,7 @@
         font-size: 12px;
         margin-bottom: 4px;
         color: var(--vscode-descriptionForeground);
+        width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -87,6 +92,7 @@
       .extension-stats {
         font-size: 11px;
         color: var(--vscode-descriptionForeground);
+        width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -100,7 +106,7 @@
         fill: var(--vscode-descriptionForeground);
       }
       .installed-icon {
-        color: #4CAF50;
+        color: #4caf50;
       }
       .install-button {
         margin-top: 8px;
@@ -143,16 +149,32 @@
       })
       searchInput.focus()
 
-      function installExtension(extensionId, button) {
+      // 监听 searchInput 宽度变化
+      function observeSearchInputWidth() {
+        const observer = new ResizeObserver(entries => {
+          for (const entry of entries) {
+            const width = entry.contentRect.width - 48
+            document.documentElement.style.setProperty('--viewport-width', `${width}px`)
+            // vscode.postMessage({
+            //   command: 'log',
+            //   width: width
+            // })
+          }
+        })
+        observer.observe(searchInput)
+      }
+
+      function installExtension(button, extensionId, extensionFile) {
         button.textContent = '安装中...'
         button.disabled = true
         vscode.postMessage({
           command: 'install',
-          extensionId: extensionId
+          extensionId: extensionId,
+          extensionFile: extensionFile
         })
       }
 
-      function uninstallExtension(extensionId, button) {
+      function uninstallExtension(button, extensionId) {
         button.textContent = '卸载中...'
         button.disabled = true
         vscode.postMessage({
@@ -187,6 +209,9 @@
           case 'refresh':
             searchExtensions()
             break
+          case 'resize':
+            document.documentElement.style.setProperty('--viewport-width', `${message.width}px`)
+            break
         }
       })
 
@@ -198,22 +223,30 @@
             const extensionId = ext.extensionName
             const stats = ext.installed
               ? `已安装 <span class="installed-icon">✓</span> | ${ext.publisher}`
-              : `<svg class="download-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>${ext.downloadCount || 0} | ${ext.publisher}`
+              : `<svg class="download-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>${ext.downloadCount || 0} | ${
+                  ext.publisher
+                }`
             return `<div class="extension-item">
-                  <img class="extension-icon" src="${iconUrl}" onerror="this.src='default-icon.png'" />
-                  <div class="extension-info">
-                      <h3 class="extension-name">${ext.displayName}</h3>
-                      <div class="extension-description">${ext.shortDescription}</div>
-                      <div class="extension-stats"> ${stats}</div>
-                    <button class="install-button" data-extension-id="${extensionId}" onclick="${ext.installed ? `uninstallExtension('${extensionId}', this)` : `installExtension('${extensionId}', this)`}">${ext.installed ? '卸载' : '安装'}</button>
-                  </div>
-              </div>`
+                        <img class="extension-icon" src="${iconUrl}" onerror="this.src='default-icon.png'" />
+                        <div class="extension-info">
+                            <h3 class="extension-name" title="${ext.displayName}">${ext.displayName}</h3>
+                            <div class="extension-description" title="${ext.shortDescription}">${ext.shortDescription}</div>
+                            <div class="extension-stats"> ${stats}</div>
+                          <button class="install-button" data-extension-id="${extensionId}" onclick="${
+              ext.installed ? `uninstallExtension(this, '${extensionId}')` : `installExtension(this, '${extensionId}', '${ext.extensionFile}')`
+            }">${ext.installed ? '卸载' : '安装'}</button>
+                        </div>
+                    </div>`
           })
           .join('')
       }
 
-      // 初始加载时执行一次搜索
-      searchExtensions()
+      window.addEventListener('load', function () {
+        // 初始加载时执行一次搜索
+        // searchExtensions()
+        // 初始化和监听 searchInput 宽度变化
+        observeSearchInputWidth()
+      })
     </script>
   </body>
 </html>

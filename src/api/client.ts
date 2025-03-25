@@ -12,6 +12,7 @@ export interface ExtensionQueryOptions {
 
 export interface ExtensionData {
   extensionId: string
+  extensionName: string
   displayName: string
   shortDescription: string
   publisher: string
@@ -21,16 +22,19 @@ export interface ExtensionData {
   rating: number
   iconUrl?: string
   installed?: boolean
+  extensionFile?: string
+  assetUri?: string
 }
 
 export class VSCodeMarketplaceClient {
   private static readonly API_BASE_URL = 'https://marketplace.visualstudio.com/_apis/public/gallery'
-  private static readonly API_VERSION = '7.0-preview'
+  private static readonly API_VERSION = '7.2-preview'
 
   private static readonly headers = {
     Accept: 'application/json;api-version=' + VSCodeMarketplaceClient.API_VERSION,
     'Content-Type': 'application/json',
-    'User-Agent': 'VSCode-Extension-Market'
+    'X-Market-Client-Id': 'VSCode',
+    'User-Agent': 'VSCode'
   }
 
   public static async searchExtensions(options: ExtensionQueryOptions): Promise<ExtensionData[]> {
@@ -58,7 +62,7 @@ export class VSCodeMarketplaceClient {
             sortBy: options.sortBy || 0
           }
         ],
-        flags: 0x1 | 0x2 | 0x4 | 0x8
+        flags: 0x2 | 0x100
       })
     }
 
@@ -110,17 +114,28 @@ export class VSCodeMarketplaceClient {
       return []
     }
 
+    // Logger.logObject('parseExtensionData', response.results[0].extensions)
     const extensions = response.results[0].extensions.map((ext: any) => {
       const extensionName = ext.publisher.publisherName + '.' + ext.extensionName
+      const extensionFile =
+        'https://marketplace.visualstudio.com/_apis/public/gallery/publishers/' +
+        ext.publisher.publisherName +
+        '/vsextensions/' +
+        ext.extensionName +
+        '/' +
+        ext.versions[0].version +
+        '/vspackage'
       const installed = vscode.extensions.getExtension(extensionName) !== undefined
       Logger.logObject(extensionName, installed)
       return {
         extensionId: ext.extensionId,
         extensionName: extensionName,
+        extensionFile: extensionFile,
         displayName: ext.displayName,
         shortDescription: ext.shortDescription,
         publisher: ext.publisher.displayName,
         version: ext.versions[0].version,
+        assetUri: ext.versions[0].assetUri,
         lastUpdated: ext.lastUpdated,
         downloadCount: ext.statistics?.find((s: any) => s.statisticName === 'install')?.value || 0,
         rating: ext.statistics?.find((s: any) => s.statisticName === 'averagerating')?.value || 0,
@@ -128,6 +143,7 @@ export class VSCodeMarketplaceClient {
         installed: installed
       }
     })
+    // Logger.logObject('parseExtensionData', extensions)
 
     return extensions
   }
