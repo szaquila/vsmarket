@@ -56,9 +56,6 @@
     "lint": "eslint src",
     "test": "vscode-test"
   },
-  "dependencies": {
-    "node-fetch": "^3.3.2"
-  },
   "devDependencies": {
     "@types/vscode": "^1.80.0",
     "@types/mocha": "^10.0.10",
@@ -66,6 +63,7 @@
     "@typescript-eslint/eslint-plugin": "^8.25.0",
     "@typescript-eslint/parser": "^8.25.0",
     "eslint": "^9.21.0",
+    "node-fetch": "^3.3.2",
     "typescript": "^5.7.3",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1"
