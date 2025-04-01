@@ -2,7 +2,7 @@
   "name": "vsmarket",
   "displayName": "VSCode插件市场",
   "description": "从VSCode插件市场安装插件",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "engines": {
     "vscode": "^1.80.0"
   },

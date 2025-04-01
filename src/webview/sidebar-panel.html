@@ -141,9 +141,19 @@
       }
 
       const searchInput = document.getElementById('searchInput')
+      let searchTimeout
+
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout)
+        searchTimeout = setTimeout(() => {
+          searchExtensions()
+        }, 3000)
+      })
+
       searchInput.addEventListener('keydown', event => {
         if (event.key === 'Enter') {
           event.preventDefault()
+          clearTimeout(searchTimeout)
           searchExtensions()
         }
       })
@@ -223,22 +233,50 @@
             const extensionId = ext.extensionName
             const stats = ext.installed
               ? `已安装 <span class="installed-icon">✓</span> | ${ext.publisher}`
-              : `<svg class="download-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>${ext.downloadCount || 0} | ${
-                  ext.publisher
-                }`
+              : `<svg class="download-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>${ext.downloadCount || 0} | ${ext.publisher}`
             return `<div class="extension-item">
                         <img class="extension-icon" src="${iconUrl}" onerror="this.src='default-icon.png'" />
                         <div class="extension-info">
                             <h3 class="extension-name" title="${ext.displayName}">${ext.displayName}</h3>
                             <div class="extension-description" title="${ext.shortDescription}">${ext.shortDescription}</div>
                             <div class="extension-stats"> ${stats}</div>
-                          <button class="install-button" data-extension-id="${extensionId}" onclick="${
-              ext.installed ? `uninstallExtension(this, '${extensionId}')` : `installExtension(this, '${extensionId}', '${ext.extensionFile}')`
-            }">${ext.installed ? '卸载' : '安装'}</button>
+                          <button class="install-button" data-extension-id="${extensionId}">${ext.installed ? '卸载' : '安装'}</button>
                         </div>
                     </div>`
           })
           .join('')
+
+        // 为所有插件项添加点击事件
+        const extensionItems = container.querySelectorAll('.extension-item')
+        extensionItems.forEach((item, index) => {
+          item.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('install-button')) {
+              showExtensionDetails(extensions[index])
+            }
+          })
+        })
+
+        // 为所有安装按钮添加点击事件
+        const installButtons = container.querySelectorAll('.install-button')
+        installButtons.forEach((button, index) => {
+          const extension = extensions[index]
+          const extensionId = extension.extensionName
+          button.addEventListener('click', (e) => {
+            e.stopPropagation()
+            if (extension.installed) {
+              uninstallExtension(button, extensionId)
+            } else {
+              installExtension(button, extensionId, extension.extensionFile)
+            }
+          })
+        })
+      }
+
+      function showExtensionDetails(extension) {
+        vscode.postMessage({
+          command: 'showDetails',
+          extension: extension
+        })
       }
 
       window.addEventListener('load', function () {

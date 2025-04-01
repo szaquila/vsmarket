@@ -15,6 +15,9 @@ export interface ExtensionData {
   extensionName: string
   displayName: string
   shortDescription: string
+  description?: string
+  features?: string
+  changelog?: string
   publisher: string
   version: string
   lastUpdated: string
@@ -133,13 +136,18 @@ export class VSCodeMarketplaceClient {
         extensionFile: extensionFile,
         displayName: ext.displayName,
         shortDescription: ext.shortDescription,
+        description: ext.versions[0].files.find((f: any) => f.assetType === 'Microsoft.VisualStudio.Services.Content.Details')?.source || '',
+        features: ext.versions[0].files.find((f: any) => f.assetType === 'Microsoft.VisualStudio.Services.Content.Features')?.source || '',
+        changelog: ext.versions[0].files.find((f: any) => f.assetType === 'Microsoft.VisualStudio.Services.Content.Changelog')?.source || '',
         publisher: ext.publisher.displayName,
         version: ext.versions[0].version,
         assetUri: ext.versions[0].assetUri,
         lastUpdated: ext.lastUpdated,
         downloadCount: ext.statistics?.find((s: any) => s.statisticName === 'install')?.value || 0,
         rating: ext.statistics?.find((s: any) => s.statisticName === 'averagerating')?.value || 0,
-        iconUrl: ext.versions[0].files.find((f: any) => f.assetType === 'Microsoft.VisualStudio.Services.Icons.Default')?.source,
+        ratingCount: ext.statistics?.find((s: any) => s.statisticName === 'ratingcount')?.value || 0,
+        iconUrl: ext.versions[0].files.find((f: any) => f.assetType === 'Microsoft.VisualStudio.Services.Icons.Default')?.source ||
+                ext.versions[0].files.find((f: any) => f.assetType === 'Microsoft.VisualStudio.Services.Icons.Small')?.source,
         installed: installed
       }
     })
